@@ -8438,7 +8438,7 @@ anQ:function anQ(){},
 UQ(a){var s=0,r=A.P(t.H),q,p,o,n,m,l
 var $async$UQ=A.Q(function(b,c){if(b===1)return A.M(c,r)
 for(;;)switch(s){case 0:s=3
-return A.L(A.ayo(A.ee("https://raw.githubusercontent.com/twajp/TokoBus/master/data/dialog.json",0,null)),$async$UQ)
+return A.L(A.ayo(A.ee("https://raw.githubusercontent.com/twajp/tokobus/master/data/dialog.json",0,null)),$async$UQ)
 case 3:l=c
 s=l.b===200?4:6
 break
@@ -42223,8 +42223,8 @@ $S:328}
 A.anj.prototype={
 $1(a){if(a===0)A.v5(J.i(this.a.h(0,"url"),"waseda_bus_page"))
 else if(a===1)A.v5(J.i(this.a.h(0,"url"),"default_pdf"))
-else if(a===2)A.v5("https://twajp.github.io/TokoBus/support")
-else if(a===3)A.v5("https://twajp.github.io/TokoBus/")},
+else if(a===2)A.v5("https://twajp.github.io/tokobus/support")
+else if(a===3)A.v5("https://twajp.github.io/tokobus/")},
 $S:15}
 A.qY.prototype={
 af(){return new A.Pc()}}
