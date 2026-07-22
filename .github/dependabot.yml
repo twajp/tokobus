@@ -4,19 +4,19 @@ updates:
     directory: '/'
     schedule:
       interval: 'daily'
-      time: '09:00'
+      time: '06:00'
       timezone: 'Asia/Tokyo'
 
   - package-ecosystem: 'gradle'
     directory: '/android'
     schedule:
       interval: 'daily'
-      time: '09:00'
+      time: '06:00'
       timezone: 'Asia/Tokyo'
 
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
       interval: 'daily'
-      time: '09:00'
+      time: '06:00'
       timezone: 'Asia/Tokyo'
