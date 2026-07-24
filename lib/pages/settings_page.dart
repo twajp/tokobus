@@ -71,20 +71,24 @@ class SettingsPage extends StatelessWidget {
             style: TextStyle(color: Theme.of(context).colorScheme.onSecondary),
           ),
           actionsPadding: const EdgeInsets.only(bottom: 15, right: 15),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: ThemeModeOption.values.map((mode) {
-              return RadioListTile<ThemeModeOption>(
-                title: Text(_themeModeToString(mode)),
-                activeColor: wasedaColor,
-                value: mode,
-                groupValue: themeProvider.themeModeOption,
-                onChanged: (value) {
-                  themeProvider.setThemeMode(value!);
-                  Navigator.of(context).pop();
-                },
-              );
-            }).toList(),
+          content: RadioGroup<ThemeModeOption>(
+            groupValue: themeProvider.themeModeOption,
+            onChanged: (value) {
+              if (value != null) {
+                themeProvider.setThemeMode(value);
+                Navigator.of(context).pop();
+              }
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: ThemeModeOption.values.map((mode) {
+                return RadioListTile<ThemeModeOption>(
+                  title: Text(_themeModeToString(mode)),
+                  activeColor: wasedaColor,
+                  value: mode,
+                );
+              }).toList(),
+            ),
           ),
           actions: [
             TextButton(
