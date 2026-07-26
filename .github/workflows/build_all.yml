@@ -66,7 +66,7 @@ jobs:
       - name: Commit and push pubspec.yaml
         run: |
           git add -u pubspec.yaml
-          echo "バージョン番号を$VERSION_FULLに変更" | git commit --file=-
+          echo "chore(release): バージョン番号を$VERSION_FULLに変更" | git commit --file=-
           git push
 
       - name: Check previous release version name
