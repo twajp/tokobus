@@ -569,8 +569,7 @@ Map timetableDataSemester() {
     'url': {
       'waseda_bus_page': 'https://www.waseda.jp/fhum/hum/facility/bus-parking/',
       'default_pdf': 'https://waseda.app.box.com/s/fydld0vwh67hl0kdrysm7di2h4jgqyxo',
-      'special_pdf': {
-      },
+      'special_pdf': {},
     },
   };
   return timetable;
