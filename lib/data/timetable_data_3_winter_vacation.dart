@@ -391,8 +391,7 @@ Map timetableDataWinterVacation() {
     'url': {
       'waseda_bus_page': 'https://www.waseda.jp/fhum/hum/facility/bus-parking/',
       'default_pdf': 'https://www.waseda.jp/fhum/hum/assets/uploads/2025/11/School-Bus-Schedule-for-Winter-Vacationfrom-23th-December-2025-to-6th-January-2026.pdf',
-      'special_pdf': {
-      },
+      'special_pdf': {},
     },
   };
   return timetable;
