@@ -84,7 +84,7 @@ flutter {
     source '../..'
 }
 
-def kotlin_version = "2.4.10"
+def kotlin_version = "2.4.20"
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
