@@ -1,18 +1,24 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> jsonAlertHandler({required BuildContext context, http.Client? client}) async {
-  final url = Uri.parse('https://raw.githubusercontent.com/twajp/tokobus/master/data/dialog.json');
-  // final url = Uri.parse('../../data/dialog.json'); // テスト用
+  // リリース時は GitHub を参照
+  // デバッグ時はローカルサーバー (Web/iOS: localhost, Android: 10.0.2.2) を参照
+  // デバッグ時のローカルサーバー起動コマンド: npx http-server --cors -p 8000
+  const prodUrl = 'https://raw.githubusercontent.com/twajp/tokobus/master/data/dialog.json';
+  final debugUrl = kIsWeb || Platform.isIOS ? 'http://localhost:8000/data/dialog.json' : 'http://10.0.2.2:8000/data/dialog.json';
+  final url = Uri.parse(kDebugMode ? debugUrl : prodUrl);
+
   // client が提供されている場合はそれを使用し、そうでない場合は http.get (内部でデフォルトクライアントを使用) を使用
   final response = await (client?.get(url) ?? http.get(url));
 
   if (response.statusCode == 200) {
     final jsonData = json.decode(response.body);
-    // final jsonData = jsonDecode(utf8.decode(response.bodyBytes)); // テスト用
     final prefs = await SharedPreferences.getInstance();
     final int? ignoredId = prefs.getInt('ignored_alert_id');
 
