@@ -1,30 +1,56 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:tokobus/main.dart';
+import 'package:tokobus/services/theme_provider.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  setUp(() async {
+    // SharedPreferencesのモック設定
+    SharedPreferences.setMockInitialValues({
+      'lastShownBuild': 9999, // イントロ画面をスキップするために大きな値を設定
+    });
+    // PackageInfoのモック設定
+    PackageInfo.setMockInitialValues(
+      appName: 'TokoBus',
+      packageName: 'jp.twa.tokobus',
+      version: '1.0.0',
+      buildNumber: '9999',
+      buildSignature: '',
+    );
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  testWidgets('App smoke test', (WidgetTester tester) async {
+    // ネットワークリクエストのモック化
+    final mockClient = MockClient((request) async {
+      return http.Response(
+        '{"id": 0, "flag": false, "title": "Test", "content": "Test content", "url": ""}',
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // アプリをビルドしてフレームをトリガーする
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => ThemeProvider(),
+        child: MyApp(httpClient: mockClient),
+      ),
+    );
+
+    // 非同期の初期化処理（SharedPreferencesなど）を待つ
     await tester.pump();
+    // タイマーや非同期処理が進むのを待つ
+    await tester.pump(const Duration(milliseconds: 500));
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // 「時刻表Ver:」というテキストが含まれるウィジェットが存在することを確認
+    expect(find.textContaining('時刻表Ver:'), findsOneWidget);
+
+    // AppBarのメニューボタン（Icons.more_vert）が存在することを確認
+    expect(find.byIcon(Icons.more_vert), findsOneWidget);
   });
 }

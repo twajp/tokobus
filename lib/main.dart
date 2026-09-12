@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
 
 import 'services/theme.dart';
 import 'services/code.dart';
@@ -25,7 +27,8 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final http.Client? httpClient;
+  const MyApp({super.key, this.httpClient});
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +38,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: {
-        '/': (BuildContext context) => const MyHomePage(),
+        '/': (BuildContext context) => MyHomePage(httpClient: httpClient),
         '/settings': (BuildContext context) => const SettingsPage(),
         // '/fulltable':
       },
@@ -47,7 +50,8 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
+  final http.Client? httpClient;
+  const MyHomePage({super.key, this.httpClient});
 
   @override
   MyHomePageState createState() => MyHomePageState();
@@ -55,27 +59,35 @@ class MyHomePage extends StatefulWidget {
 
 class MyHomePageState extends State<MyHomePage> {
   Map timetable = code();
+  Timer? _timer;
 
-  Future<void> mainLoop() async {
-    while (true) {
-      await Future<void>.delayed(const Duration(seconds: 1));
+  void startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         timetable = code();
       });
-    }
+    });
   }
 
   @override
   void initState() {
     super.initState();
-    mainLoop();
+    startTimer();
     showIntroIfRequired(context);
 
     // 他の初期化処理
     SchedulerBinding.instance.addPostFrameCallback((_) {
       showDialogOnSpecialDate(context: context, timetable: timetable);
     });
-    jsonAlertHandler(context: context);
+    jsonAlertHandler(context: context, client: widget.httpClient).catchError((e) {
+      debugPrint('Alert error: $e');
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override

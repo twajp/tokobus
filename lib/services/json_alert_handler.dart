@@ -4,10 +4,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-Future<void> jsonAlertHandler({required BuildContext context}) async {
+Future<void> jsonAlertHandler({required BuildContext context, http.Client? client}) async {
   final url = Uri.parse('https://raw.githubusercontent.com/twajp/tokobus/master/data/dialog.json');
   // final url = Uri.parse('../../data/dialog.json'); // テスト用
-  final response = await http.get(url);
+  // client が提供されている場合はそれを使用し、そうでない場合は http.get (内部でデフォルトクライアントを使用) を使用
+  final response = await (client?.get(url) ?? http.get(url));
 
   if (response.statusCode == 200) {
     final jsonData = json.decode(response.body);
@@ -21,7 +22,7 @@ Future<void> jsonAlertHandler({required BuildContext context}) async {
       _showJsonAlert(context: context, jsonData: jsonData, prefs: prefs);
     }
   } else {
-    throw Exception('Failed to load JSON data');
+    throw Exception('Failed to load JSON data: ${response.statusCode}');
   }
 }
 
