@@ -19,12 +19,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Checkout web-source branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: web-source
-          path: worktree-gh-pages
-
       - name: Wait for push to complete
         if: github.event_name == 'workflow_call'
         run: |
@@ -50,13 +44,12 @@ jobs:
         run: |
           flutter --version
           flutter pub get
-          flutter build web --base-href /$(echo ${{ github.repository }} | sed -e "s#.*/##")/app/
-          cp -r ./build/web/. ./worktree-gh-pages/app
+          flutter build web --base-href /$(echo ${{ github.repository }} | sed -e "s#.*/##")/app/ --output ./docs/app
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./worktree-gh-pages
+          publish_dir: ./docs
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
