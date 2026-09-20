@@ -19,8 +19,8 @@ dependencies:
   shared_preferences: ^2.5.5
   settings_ui: ^3.0.1
   provider: ^6.1.5
-  dots_indicator: ^4.0.1
-  introduction_screen: ^4.0.0
+  dots_indicator: ^5.0.0
+  introduction_screen: ^5.0.1
   package_info_plus: ^10.2.1
 
 dev_dependencies:
