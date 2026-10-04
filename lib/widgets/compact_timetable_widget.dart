@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../pages/full_timetable_page.dart';
 
 class CompactTimetableWidget extends StatelessWidget {

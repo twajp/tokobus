@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:dots_indicator/dots_indicator.dart';
 import '../widgets/home_appbar.dart';
 import '../widgets/compact_timetable_widget.dart';
@@ -46,9 +46,9 @@ class _PortraitLayoutState extends State<PortraitLayout> {
     super.dispose();
   }
 
-  void _updatePosition(double position) {
+  void _updatePosition(int position) {
     _pageController.animateToPage(
-      position.toInt(),
+      position,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
@@ -129,7 +129,7 @@ class _PortraitLayoutState extends State<PortraitLayout> {
               size: const Size(8.0, 8.0),
               spacing: const EdgeInsets.all(4.0),
             ),
-            onTap: widget.isProgressTap && !widget.freeze ? (pos) => _updatePosition(pos as double) : null,
+            onTap: widget.isProgressTap && !widget.freeze ? _updatePosition : null,
           ),
         ),
       ),
