@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../widgets/home_appbar.dart';
 import '../widgets/compact_timetable_widget.dart';
 import '../widgets/home_drawer.dart';
