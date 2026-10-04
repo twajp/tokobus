@@ -1,35 +1,61 @@
 name: Build Web
 
 on:
-# push:
-#   branches: [ master ]
+  # Pushes to master deploy to stg/; Build All calls this workflow for app/.
+  push:
+    branches: [ master ]
   workflow_dispatch:
+    inputs:
+      DEPLOY_TARGET:
+        description: 'Deploy target (stg always builds master; app builds the selected ref)'
+        type: choice
+        default: stg
+        options:
+          - stg
+          - app
   workflow_call:
     inputs:
       COMMIT_ID:
         required: true
         type: string
+      DEPLOY_TARGET:
+        description: 'Destination directory: app or stg'
+        type: string
+        default: app
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   build_web:
     runs-on: ubuntu-latest
+    # All writers to gh-pages share this group, including Build Docs.
+    # Keep pending deployments queued so staging pushes cannot replace a release.
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+      queue: max
+    env:
+      DEPLOY_TARGET: ${{ inputs.DEPLOY_TARGET || 'stg' }}
     steps:
+      - name: Validate deploy target
+        run: |
+          case "$DEPLOY_TARGET" in
+            app|stg) ;;
+            *) echo "Unsupported deploy target: $DEPLOY_TARGET" >&2; exit 1 ;;
+          esac
+
       - name: Clone repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Wait for push to complete
-        if: github.event_name == 'workflow_call'
-        run: |
-          echo "Input: ${{ inputs.COMMIT_ID }}"
-          echo "Clone: $(git show --format='%H' --no-patch)"
-          while [ ${{ inputs.COMMIT_ID }} != $(git show --format='%H' --no-patch) ]; do
-            sleep 1
-            git pull
-            echo "Input: ${{ inputs.COMMIT_ID }}"
-            echo "Clone: $(git show --format='%H' --no-patch)"
-          done
+          # Manual stg builds use latest master; manual app builds use the selected ref.
+          # Build All supplies the exact release commit through COMMIT_ID.
+          ref: ${{ inputs.COMMIT_ID || (github.event_name == 'workflow_dispatch' && inputs.DEPLOY_TARGET == 'stg' && 'master') || github.sha }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -44,12 +70,29 @@ jobs:
         run: |
           flutter --version
           flutter pub get
-          flutter build web --base-href /$(echo ${{ github.repository }} | sed -e "s#.*/##")/app/ --output ./docs/app
+          flutter build web --base-href "/${GITHUB_REPOSITORY##*/}/$DEPLOY_TARGET/" --output ./build/web
+
+      # Skip outdated staging builds if master advances during the build.
+      - name: Check staging commit is still current
+        id: current_commit
+        run: |
+          if [ "$DEPLOY_TARGET" = stg ]; then
+            master_commit=$(git ls-remote --exit-code origin refs/heads/master | cut -f1)
+            if [ "$(git rev-parse HEAD)" != "$master_commit" ]; then
+              echo "Skipping staging deploy because master has advanced."
+              echo "deploy=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "deploy=true" >> "$GITHUB_OUTPUT"
 
       - name: Deploy
+        if: steps.current_commit.outputs.deploy == 'true'
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
+          publish_dir: ./build/web
+          # Replace old files only within this target on gh-pages, preserving the other target and docs.
+          destination_dir: ${{ env.DEPLOY_TARGET }}
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'

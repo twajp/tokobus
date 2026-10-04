@@ -140,8 +140,12 @@ jobs:
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
 
+  # Deploy the release commit directly to app/.
   build_web:
     needs: [ build_all ]
+    permissions:
+      contents: write
     uses: ./.github/workflows/build_web.yml
     with:
       COMMIT_ID: ${{ needs.build_all.outputs.COMMIT_ID }}
+      DEPLOY_TARGET: app
