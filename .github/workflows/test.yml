@@ -1,6 +1,9 @@
 name: Flutter CI
 
 on:
+  # Prepare Release explicitly dispatches CI because GITHUB_TOKEN-created PRs
+  # may leave pull_request workflows awaiting approval.
+  workflow_dispatch:
   push:
     branches: [ master ] # 複数PRを同時にマージしたとき等のため
   pull_request:

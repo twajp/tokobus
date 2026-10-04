@@ -3,15 +3,6 @@ name: Build All
 on:
   workflow_dispatch:
     inputs:
-      bump_type:
-        type: choice
-        description: Choose Bump Type
-        default: patch
-        options:
-          - major
-          - minor
-          - patch
-          - build
       target:
         type: choice
         description: Choose Build Target
@@ -24,6 +15,9 @@ on:
         default: true
         description: Create a Tag and Release Note
 
+permissions:
+  contents: write
+
 jobs:
   build_all:
     runs-on: ubuntu-latest
@@ -32,6 +26,13 @@ jobs:
     outputs:
       COMMIT_ID: ${{ steps.commit_id.outputs.COMMIT_ID }}
     steps:
+      - name: Require master for releases
+        run: |
+          if [ "$GITHUB_REF" != refs/heads/master ]; then
+            echo 'Run Build All on master after merging the Prepare Release PR.' >&2
+            exit 1
+          fi
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -51,23 +52,10 @@ jobs:
       - name: Set up cider
         run: flutter pub global activate cider
 
-      - name: Init git config
+      - name: Read merged release version
         run: |
-          git config --local user.name 'github-actions[bot]'
-          git config --local user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: Bump up version
-        run: |
-          echo choice: ${{ github.event.inputs.bump_type }}
-          cider bump ${{ github.event.inputs.bump_type }} --bump-build
           echo "VERSION_NAME=$(cider version | grep -o -E "([0-9]+\.){1}[0-9]+(\.[0-9]+)?")" >> $GITHUB_ENV
           echo "VERSION_FULL=$(cider version)" >> $GITHUB_ENV
-
-      - name: Commit and push pubspec.yaml
-        run: |
-          git add -u pubspec.yaml
-          echo "chore(release): バージョン番号を$VERSION_FULLに変更" | git commit --file=-
-          git push
 
       - name: Check previous release version name
         if: github.event.inputs.tag_and_release_note == 'true'
@@ -93,7 +81,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v$VERSION_NAME --generate-notes
+          gh release create v$VERSION_NAME --target "$GITHUB_SHA" --generate-notes
 
       - name: Get commit logs and add to the release note
         if: github.event.inputs.tag_and_release_note == 'true'

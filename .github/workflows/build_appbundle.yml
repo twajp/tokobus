@@ -28,17 +28,8 @@ jobs:
     steps:
       - name: Checks-out my repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Wait for push to complete
-        run: |
-          echo "Input: ${{ inputs.COMMIT_ID }}"
-          echo "Clone: $(git show --format='%H' --no-patch)"
-          while [ ${{ inputs.COMMIT_ID }} != $(git show --format='%H' --no-patch) ]; do
-            sleep 1
-            git pull
-            echo "Input: ${{ inputs.COMMIT_ID }}"
-            echo "Clone: $(git show --format='%H' --no-patch)"
-          done
+        with:
+          ref: ${{ inputs.COMMIT_ID || github.sha }}
 
       - name: Install Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0

@@ -26,22 +26,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.COMMIT_ID || github.sha }}
 
       - name: Setup latest stable Xcode
         uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
         with:
           xcode-version: latest-stable
-
-      - name: Wait for push to complete
-        run: |
-          echo "Input: ${{ inputs.COMMIT_ID }}"
-          echo "Clone: $(git show --format='%H' --no-patch)"
-          while [ ${{ inputs.COMMIT_ID }} != $(git show --format='%H' --no-patch) ]; do
-            sleep 1
-            git pull
-            echo "Input: ${{ inputs.COMMIT_ID }}"
-            echo "Clone: $(git show --format='%H' --no-patch)"
-          done
 
       - name: Extract App Store Connect API Private Key in ./private_keys
         env:
