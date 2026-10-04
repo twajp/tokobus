@@ -1,0 +1,62 @@
+name: Build Docs
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/build_docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deploy_docs:
+    runs-on: ubuntu-latest
+    # Serialize with both app and stg deployments to the same branch.
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - name: Checkout latest documentation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: master
+          path: source
+
+      - name: Checkout published site
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          path: published
+
+      # Sync docs to the gh-pages root, leaving separately deployed app/ and stg/ intact.
+      - name: Sync documentation while preserving app deployments
+        run: |
+          rsync -a --delete \
+            --exclude='/.git/' \
+            --exclude='/.nojekyll' \
+            --exclude='/app/' \
+            --exclude='/stg/' \
+            source/docs/ published/
+          touch published/.nojekyll
+
+      - name: Publish documentation
+        working-directory: published
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add --all
+          if git diff --cached --quiet; then
+            echo "Documentation is already up to date."
+            exit 0
+          fi
+          source_commit=$(git -C ../source rev-parse HEAD)
+          git commit -m "docs: Update site from $source_commit"
+          git push origin HEAD:gh-pages
