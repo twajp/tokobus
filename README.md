@@ -16,15 +16,13 @@
 本アプリの不具合等によるいかなる損害についても、一切の責任を負いかねます。  
 
 ## リリース
-バージョン更新と配信は次の順番で実行します。PAT や保護ルールの bypass は不要です。
+GitHub Actions の **Build All** からリリースします。
 
-1. GitHub Actions の **Prepare Release** を `master` で実行し、`bump_type` を選びます。
-2. 自動作成されたバージョン更新 PR の `test` が成功したら、PR をマージします。
-3. **Build All** を `master` で実行し、配信先とリリースノート作成の有無を選びます。
+1. `master` で実行し、バージョンの更新方法・配信先・リリースノート作成の有無を選びます。
+2. 自動作成された PR の CI が承認待ちの場合は **Approve workflows to run** を押します。
+3. `test` が成功したら PR をマージすると、選択した設定で自動配信されます。
 
-Prepare Release は `GITHUB_TOKEN` で PR を作るため、CI を明示的に起動します。
-リポジトリの Settings → Actions → General で **Allow GitHub Actions to create and approve pull requests** を有効にしてください。
-Build All はマージ済みのバージョンを使用し、`master` への直接 push は行いません。
+リポジトリの Settings → Actions → General で **Allow GitHub Actions to create and approve pull requests** を有効にしてください。PAT や保護ルールの bypass は不要です。
 
 - [Web版](https://twajp.github.io/tokobus/app/)
 - [Apple App Store](https://apps.apple.com/jp/app/id6443772387)
