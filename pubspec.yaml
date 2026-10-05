@@ -11,7 +11,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.9
+  cupertino_icons: ^2.0.0
   intl: ^0.20.3
   flex_color_scheme: ^9.0.0
   material_ui: ^1.5.0
