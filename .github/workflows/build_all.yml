@@ -15,6 +15,7 @@ on:
       target:
         type: choice
         description: Choose Build Target
+        default: all
         options:
           - all
           - ios
@@ -23,99 +24,139 @@ on:
         type: boolean
         default: true
         description: Create a Tag and Release Note
+  pull_request:
+    types: [ closed ]
+    branches: [ master ]
+
+permissions:
+  contents: read
 
 jobs:
-  build_all:
+  prepare_release:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: prepare-release
+      cancel-in-progress: false
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    outputs:
-      COMMIT_ID: ${{ steps.commit_id.outputs.COMMIT_ID }}
+      GH_TOKEN: ${{ github.token }}
+      BUMP_TYPE: ${{ inputs.bump_type }}
+      TARGET: ${{ inputs.target }}
+      TAG_AND_RELEASE_NOTE: ${{ inputs.tag_and_release_note }}
     steps:
+      - name: Require master
+        run: |
+          if [ "$GITHUB_REF" != refs/heads/master ]; then
+            echo 'Run Build All on master.' >&2
+            exit 1
+          fi
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
 
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
-          channel: 'stable'
+          channel: stable
           cache: true
 
-      - name: Run flutter doctor
-        run: flutter doctor -v
-
-      - name: Run flutter pub get
-        run: flutter pub get
-
-      - name: Set up cider
-        run: flutter pub global activate cider
-
-      - name: Init git config
+      - name: Bump version
         run: |
+          flutter pub global activate cider
+          cider bump "$BUMP_TYPE" --bump-build
+          echo "VERSION_FULL=$(cider version)" >> "$GITHUB_ENV"
+
+      - name: Create release PR
+        run: |
+          branch="release/v$VERSION_FULL"
+          git switch -c "$branch"
           git config --local user.name 'github-actions[bot]'
           git config --local user.email 'github-actions[bot]@users.noreply.github.com'
+          git add pubspec.yaml
+          git commit -m "chore(release): bump version to $VERSION_FULL"
+          git push origin "$branch"
 
-      - name: Bump up version
-        run: |
-          echo choice: ${{ github.event.inputs.bump_type }}
-          cider bump ${{ github.event.inputs.bump_type }} --bump-build
-          echo "VERSION_NAME=$(cider version | grep -o -E "([0-9]+\.){1}[0-9]+(\.[0-9]+)?")" >> $GITHUB_ENV
-          echo "VERSION_FULL=$(cider version)" >> $GITHUB_ENV
+          options=$(jq -cn --arg version "$VERSION_FULL" --arg target "$TARGET" \
+            --argjson notes "$TAG_AND_RELEASE_NOTE" \
+            '{version: $version, target: $target, tag_and_release_note: $notes}')
+          cat > "$RUNNER_TEMP/release-pr.md" <<EOF
+          バージョンを $VERSION_FULL に更新します。マージ後に自動で配信します。
 
-      - name: Commit and push pubspec.yaml
-        run: |
-          git add -u pubspec.yaml
-          echo "chore(release): バージョン番号を$VERSION_FULLに変更" | git commit --file=-
-          git push
+          - 配信先: $TARGET（Web は常に配信）
+          - タグ・リリースノート作成: $TAG_AND_RELEASE_NOTE
 
-      - name: Check previous release version name
-        if: github.event.inputs.tag_and_release_note == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "PREV_VERSION_NAME=$(gh release list --limit 1 | grep -o -E "([0-9]+\.){1}[0-9]+(\.[0-9]+)?" | head -n1)" >> $GITHUB_ENV
+          CI が承認待ちの場合は **Approve workflows to run** を押し、test 成功後にマージしてください。
 
-      - name: Delete previous release if version number is same
-        if: |
-          github.event.inputs.tag_and_release_note == 'true' &&
-          env.VERSION_NAME == env.PREV_VERSION_NAME
-        env:
-          GH_TOKEN: ${{ github.token }}
+          <!-- build-all: $options -->
+          EOF
+          pr_url=$(gh pr create --base master --head "$branch" \
+            --title "chore(release): bump version to $VERSION_FULL" \
+            --body-file "$RUNNER_TEMP/release-pr.md")
+          echo "Release PR: $pr_url" >> "$GITHUB_STEP_SUMMARY"
+
+  build_all:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged &&
+      github.event.pull_request.user.login == 'github-actions[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'release/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    outputs:
+      COMMIT_ID: ${{ github.event.pull_request.merge_commit_sha }}
+      TARGET: ${{ steps.options.outputs.target }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+
+      - name: Read release options
+        id: options
         run: |
-          gh release delete v$PREV_VERSION_NAME
-          git push origin --delete v$PREV_VERSION_NAME
-          git tag -d v$PREV_VERSION_NAME
-          echo "PREV_VERSION_NAME=$(gh release list --limit 1 | grep -o -E "([0-9]+\.){1}[0-9]+(\.[0-9]+)?" | head -n1)" >> $GITHUB_ENV
+          version=$(awk '$1 == "version:" {print $2}' pubspec.yaml)
+          options=$(jq -er '.pull_request.body |
+            capture("<!-- build-all: (?<options>[^\\n]+) -->").options | fromjson' "$GITHUB_EVENT_PATH")
+          jq -e --arg version "$version" '
+            .version == $version and
+            (.target == "all" or .target == "ios" or .target == "appbundle") and
+            (.tag_and_release_note | type == "boolean")' <<< "$options"
+          echo "target=$(jq -r '.target' <<< "$options")" >> "$GITHUB_OUTPUT"
+          echo "tag_and_release_note=$(jq -r '.tag_and_release_note' <<< "$options")" >> "$GITHUB_OUTPUT"
+          echo "VERSION_NAME=${version%%+*}" >> "$GITHUB_ENV"
 
       - name: Create tag and release note
-        if: github.event.inputs.tag_and_release_note == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
+        if: steps.options.outputs.tag_and_release_note == 'true'
         run: |
-          gh release create v$VERSION_NAME --generate-notes
-
-      - name: Get commit logs and add to the release note
-        if: github.event.inputs.tag_and_release_note == 'true'
-        run: |
-          echo "## What's Changed" > release_note.md
-          git log v$PREV_VERSION_NAME..HEAD --reverse --pretty=format:'* %s' >> release_note.md
-          echo '' >>  release_note.md
-          echo '' >>  release_note.md
-          gh release view v$VERSION_NAME --json body --jq .body >> release_note.md
-          gh release edit v$VERSION_NAME --notes-file release_note.md
-
-      - name: Check and save commit ID
-        id: commit_id
-        run: |
-          git show --format='%H' --no-patch
-          echo "COMMIT_ID=$(git show --format='%H' --no-patch)" >> $GITHUB_OUTPUT
+          tag="v$VERSION_NAME"
+          # A build-only bump replaces the release for the same version name.
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release delete "$tag" --yes --cleanup-tag
+            git tag -d "$tag"
+          fi
+          previous_tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName // empty')
+          range="HEAD"
+          if [ -n "$previous_tag" ]; then
+            range="$previous_tag..HEAD"
+          fi
+          {
+            echo "## What's Changed"
+            git log "$range" --reverse --pretty=format:'* %s'
+            echo
+            echo
+          } > "$RUNNER_TEMP/release-note.md"
+          gh release create "$tag" --target "$(git rev-parse HEAD)" \
+            --generate-notes --notes-file "$RUNNER_TEMP/release-note.md"
 
   build_ios:
     needs: [ build_all ]
-    if: |
-      github.event.inputs.target == 'all' ||
-      github.event.inputs.target == 'ios'
+    if: needs.build_all.outputs.TARGET == 'all' || needs.build_all.outputs.TARGET == 'ios'
     uses: ./.github/workflows/build_ios.yml
     with:
       COMMIT_ID: ${{ needs.build_all.outputs.COMMIT_ID }}
@@ -127,9 +168,7 @@ jobs:
 
   build_appbundle:
     needs: [ build_all ]
-    if: |
-      github.event.inputs.target == 'all' ||
-      github.event.inputs.target == 'appbundle'
+    if: needs.build_all.outputs.TARGET == 'all' || needs.build_all.outputs.TARGET == 'appbundle'
     uses: ./.github/workflows/build_appbundle.yml
     with:
       COMMIT_ID: ${{ needs.build_all.outputs.COMMIT_ID }}
@@ -140,7 +179,6 @@ jobs:
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
 
-  # Deploy the release commit directly to app/.
   build_web:
     needs: [ build_all ]
     permissions:

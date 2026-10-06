@@ -16,6 +16,14 @@
 本アプリの不具合等によるいかなる損害についても、一切の責任を負いかねます。  
 
 ## リリース
+GitHub Actions の **Build All** からリリースします。
+
+1. `master` で実行し、バージョンの更新方法・配信先・リリースノート作成の有無を選びます。
+2. 自動作成された PR の CI が承認待ちの場合は **Approve workflows to run** を押します。
+3. `test` が成功したら PR をマージすると、選択した設定で自動配信されます。
+
+リポジトリの Settings → Actions → General で **Allow GitHub Actions to create and approve pull requests** を有効にしてください。PAT や保護ルールの bypass は不要です。
+
 - [Web版](https://twajp.github.io/tokobus/app/)
 - [Apple App Store](https://apps.apple.com/jp/app/id6443772387)
 - [Google Play Store](https://play.google.com/store/apps/details?id=jp.twa.tokobus)
