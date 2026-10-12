@@ -18,7 +18,7 @@ dependencies:
   nholiday_jp: ^1.0.2
   url_launcher: ^6.3.3
   http: ^1.6.0
-  shared_preferences: ^2.5.5
+  shared_preferences: ^2.5.6
   settings_ui: ^4.0.1
   provider: ^6.1.5
   dots_indicator: ^5.0.0
