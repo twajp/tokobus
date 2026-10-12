@@ -13,6 +13,10 @@ updates:
       interval: 'daily'
       time: '06:00'
       timezone: 'Asia/Tokyo'
+    groups:
+      kotlin:
+        patterns:
+          - 'org.jetbrains.kotlin.*'
 
   - package-ecosystem: 'github-actions'
     directory: '/'
