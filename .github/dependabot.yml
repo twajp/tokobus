@@ -16,7 +16,7 @@ updates:
     groups:
       kotlin:
         patterns:
-          - 'org.jetbrains.kotlin.*'
+          - 'org.jetbrains.kotlin*'
 
   - package-ecosystem: 'github-actions'
     directory: '/'
